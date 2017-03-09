@@ -1,0 +1,18 @@
+{
+  "name": "message_bus",
+  "version": "2.0.2",
+  "author": "Sam Saffron",
+  "description": "A reliable and robust messaging bus for Ruby and Rack",
+  "main": "assets/message-bus.js",
+  "files": [
+    "assets/message-bus.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamSaffron/message_bus.git"
+  },
+  "homepage": "https://github.com/SamSaffron/message_bus",
+  "bugs": {
+    "url": "https://github.com/SamSaffron/message_bus/issues"
+  }
+}
