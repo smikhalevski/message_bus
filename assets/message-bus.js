@@ -10,22 +10,30 @@
   }
 }(this, function (global) {
   'use strict';
-  var document = global.document;
-  var previousMessageBus = global.MessageBus;
+  var originalMessageBus = global.MessageBus;
+  var canUseDOM = global.document && global.document.createElement;
   var cacheBuster = Math.random() * 10000 | 0;
+
+  if (canUseDOM) {
+    var hiddenKey = 'hidden,webkitHidden,msHidden,mozHidden,hasFocus'
+        .split(',')
+        .find(function(key) {return key in global.document});
+  }
+
+  var document = global.document;
 
   // http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
   var callbacks, clientId, failCount, shouldLongPoll, uniqueId, baseUrl;
   var me, started, stopped, longPoller, pollTimeout, paused, later, interval, chunkedBackoff;
 
-  uniqueId = function () {
+  function uniqueId() {
     return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       var r, v;
       r = Math.random() * 16 | 0;
       v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
     });
-  };
+  }
 
   clientId = uniqueId();
   callbacks = [];
@@ -35,35 +43,17 @@
   paused = false;
   later = [];
   chunkedBackoff = 0;
-  var hiddenProperty;
+  var eventListener;
 
-  (function () {
-    var prefixes = ["", "webkit", "ms", "moz"];
-    for (var i = 0; i < prefixes.length; i++) {
-      var prefix = prefixes[i];
-      var check = prefix + (prefix === "" ? "hidden" : "Hidden");
-      if (document[check] !== undefined) {
-        hiddenProperty = check;
-      }
-    }
-  })();
+  var hasonprogress = false;//(new XMLHttpRequest()).onprogress === null;
 
-  var isHidden = function () {
-    if (hiddenProperty !== undefined) {
-      return document[hiddenProperty];
-    } else {
-      return !document.hasFocus;
-    }
-  };
-
-  var hasonprogress = (new XMLHttpRequest()).onprogress === null;
-  var allowChunked = function () {
+  function allowChunked() {
     return me.enableChunkedEncoding && hasonprogress;
-  };
+  }
 
-  shouldLongPoll = function () {
-    return me.alwaysLongPoll || !isHidden();
-  };
+  function shouldLongPoll() {
+    return me.alwaysLongPoll || (canUseDOM && !global.document[hiddenKey]);
+  }
 
   var totalAjaxFailures = 0;
   var totalAjaxCalls = 0;
@@ -310,7 +300,7 @@
       return xhr;
     },
     noConflict: function () {
-      global.MessageBus = previousMessageBus;
+      global.MessageBus = originalMessageBus;
       return this;
     },
     diagnostics: function () {
@@ -338,13 +328,13 @@
 
     // Start polling
     start: function () {
-      var poll, delayPollTimeout;
+      var delayPollTimeout;
 
       if (started) return;
       started = true;
       stopped = false;
 
-      poll = function () {
+      function poll() {
         var data;
 
         if (stopped) {
@@ -367,24 +357,26 @@
         }
 
         me.longPoll = longPoller(poll, data);
-      };
+      }
 
-
-      // monitor visibility, issue a new long poll when the page shows
-      if (document.addEventListener && 'hidden' in document) {
-        me.visibilityEvent = global.document.addEventListener('visibilitychange', function () {
-          if (!document.hidden && !me.longPoll && pollTimeout) {
+      if (canUseDOM) {
+        if (eventListener) {
+          removeEventListener('visibilitychange', eventListener);
+        }
+        eventListener = function () {
+          if (!document[hiddenKey] && !me.longPoll && pollTimeout) {
             clearTimeout(pollTimeout);
             pollTimeout = null;
             poll();
           }
-        });
+        };
+        addEventListener('visibilitychange', eventListener);
       }
 
       poll();
     },
 
-    "status": function () {
+    status: function () {
       if (paused) {
         return "paused";
       } else if (started) {
