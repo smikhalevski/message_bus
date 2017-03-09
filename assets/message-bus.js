@@ -1,29 +1,31 @@
-(function (global, factory) {
+(function (root, factory) {
   if (typeof define === 'function' && define.amd) {
     define(function () {
-      return (global.MessageBus = factory(global));
+      return (root.MessageBus = factory());
     });
   } else if (typeof module === 'object' && module.exports) {
-    module.exports = factory(global);
+    module.exports = factory();
   } else {
-    global.MessageBus = factory(global);
+    root.MessageBus = factory();
   }
-}(this, function (global) {
+}(this, function () {
   'use strict';
-  var originalMessageBus = global.MessageBus;
-  var canUseDOM = global.document && global.document.createElement;
+
+  var originalMessageBus = window.MessageBus;
+  var canUseDOM = window.document && window.document.createElement;
   var cacheBuster = Math.random() * 10000 | 0;
 
   if (canUseDOM) {
     var hiddenKey = 'hidden,webkitHidden,msHidden,mozHidden,hasFocus'
         .split(',')
-        .find(function(key) {return key in global.document});
+        .find(function(key) {return key in window.document});
   }
 
-  var document = global.document;
+  var document = window.document;
+  var XHRImpl = window.XMLHttpRequest;
 
   // http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
-  var callbacks, clientId, failCount, shouldLongPoll, uniqueId, baseUrl;
+  var callbacks, clientId, failCount, baseUrl;
   var me, started, stopped, longPoller, pollTimeout, paused, later, interval, chunkedBackoff;
 
   function uniqueId() {
@@ -52,7 +54,7 @@
   }
 
   function shouldLongPoll() {
-    return me.alwaysLongPoll || (canUseDOM && !global.document[hiddenKey]);
+    return me.alwaysLongPoll || (canUseDOM && !window.document[hiddenKey]);
   }
 
   var totalAjaxFailures = 0;
@@ -118,17 +120,7 @@
       chunked = false;
     }
 
-    var headers = {
-      'X-SILENCE-LOGGER': 'true'
-    };
-    for (var name in me.headers) {
-      headers[name] = me.headers[name];
-    }
-
-    if (!chunked) {
-      headers["Dont-Chunk"] = 'true';
-    }
-
+    var headers = me.headers;
     var dataType = chunked ? "text" : "json";
 
     var handle_progress = function (payload, position) {
@@ -270,7 +262,6 @@
     baseUrl: baseUrl,
     headers: {},
     ajax: function (options) {
-      var XHRImpl = (global.MessageBus && global.MessageBus.xhrImplementation) || global.XMLHttpRequest;
       var xhr = new XHRImpl();
       xhr.dataType = options.dataType;
       var url = options.url;
@@ -300,7 +291,7 @@
       return xhr;
     },
     noConflict: function () {
-      global.MessageBus = originalMessageBus;
+      window.MessageBus = originalMessageBus;
       return this;
     },
     diagnostics: function () {
