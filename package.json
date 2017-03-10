@@ -1,6 +1,6 @@
 {
   "name": "message_bus",
-  "version": "2.0.2",
+  "version": "2.0.3-beta.1",
   "author": "Sam Saffron",
   "description": "A reliable and robust messaging bus for Ruby and Rack",
   "main": "assets/message-bus.js",
