@@ -26,7 +26,7 @@
 
   // http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
   var callbacks, clientId, failCount, baseUrl;
-  var me, started, stopped, longPoller, pollTimeout, paused, later, interval, chunkedBackoff;
+  var me, started, stopped, pollTimeout, paused, later, interval, chunkedBackoff;
 
   function uniqueId() {
     return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -61,7 +61,7 @@
   var totalAjaxCalls = 0;
   var lastAjax;
 
-  var processMessages = function (messages) {
+  function processMessages(messages) {
     var gotData = false;
     if (!messages) return false; // server unexpectedly closed connection
 
@@ -90,9 +90,9 @@
     }
 
     return gotData;
-  };
+  }
 
-  var reqSuccess = function (messages) {
+  function reqSuccess(messages) {
     failCount = 0;
     if (paused) {
       if (messages) {
@@ -104,9 +104,9 @@
       return processMessages(messages);
     }
     return false;
-  };
+  }
 
-  longPoller = function (poll, data) {
+  function longPoller(poll, data) {
     var gotData = false;
     var aborted = false;
     lastAjax = new Date();
@@ -123,7 +123,7 @@
     var headers = me.headers;
     var dataType = chunked ? "text" : "json";
 
-    var handle_progress = function (payload, position) {
+    function handle_progress(payload, position) {
 
       var separator = "\r\n|\r\n";
       var endChunk = payload.indexOf(separator, position);
@@ -147,14 +147,14 @@
       return handle_progress(payload, endChunk + separator.length);
     }
 
-    var disableChunked = function () {
+    function disableChunked() {
       if (me.longPoll) {
         me.longPoll.abort();
         chunkedBackoff = 30;
       }
-    };
+    }
 
-    var setOnProgressListener = function (xhr) {
+    function setOnProgressListener(xhr) {
       var position = 0;
       // if it takes longer than 3000 ms to get first chunk, we have some proxy
       // this is messing with us, so just backoff from using chunked for now
@@ -168,7 +168,8 @@
         }
         position = handle_progress(xhr.responseText, position);
       }
-    };
+    }
+
     var req = me.ajax({
       url: me.baseUrl + "message-bus/" + me.clientId + "/poll" + (!longPoll ? "?dlp=t" : ""),
       data: data,
@@ -179,20 +180,7 @@
       headers: headers,
       messageBus: {
         chunked: chunked,
-        onProgressListener: function (xhr) {
-          var position = 0;
-          // if it takes longer than 3000 ms to get first chunk, we have some proxy
-          // this is messing with us, so just backoff from using chunked for now
-          var chunkedTimeout = setTimeout(disableChunked, 3000);
-          return xhr.onprogress = function () {
-            clearTimeout(chunkedTimeout);
-            if (xhr.getResponseHeader('Content-Type') === 'application/json; charset=utf-8') {
-              chunked = false; // not chunked, we are sending json back
-            } else {
-              position = handle_progress(xhr.responseText, position);
-            }
-          }
-        }
+        onProgressListener: setOnProgressListener
       },
       success: function (messages) {
         if (!chunked) {
@@ -248,7 +236,7 @@
     });
 
     return req;
-  };
+  }
 
   me = {
     enableChunkedEncoding: true,
@@ -287,7 +275,7 @@
           options.complete();
         }
       }
-      xhr.send(JSON.stringify(options.data));
+      xhr.send(JSON.stringify(options.data));;
       return xhr;
     },
     noConflict: function () {
